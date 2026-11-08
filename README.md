@@ -1,1 +1,0 @@
-# ai-sql-analyst-bot
