@@ -1,0 +1,94 @@
+{
+  "name": "Autonomous Data Analyst - Automated Nightly CEO Report",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "59 23 * * *"
+            }
+          ]
+        }
+      },
+      "id": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "name": "Nightly Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://backend:8000/api/v1/analyze",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"user_query\": \"گزارش جامع فروش امروز را بده: در روز جاری (امروز) چند سفارش تکمیل‌شده ثبت شده، مجموع درآمد امروز چند تومان بوده و پرفروش‌ترین دسته‌بندی امروز کدام بوده است؟\"\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      "name": "Request Daily Executive Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_ADMIN_CHAT_ID }}",
+        "text": "=🌙 **گزارش خودکار شبانه مدیرعامل (Automated Daily BI)**\n\n{{ $json.answer }}\n\n───────────────────\n🤖 تولید شده توسط: Autonomous Text-to-SQL Agent\n⏱ زمان اجرای کوئری: {{ $json.execution_time_ms }} ms",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "id": "cccccccc-cccc-cccc-cccc-cccccccccccc",
+      "name": "Send Nightly Report to CEO Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        780,
+        300
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Nightly Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Request Daily Executive Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Request Daily Executive Report": {
+      "main": [
+        [
+          {
+            "node": "Send Nightly Report to CEO Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "2b3c4d5e-6f7a-8b9c-0d1e-2f3a4b5c6d7e",
+  "id": "daily_report_cron",
+  "tags": []
+}
