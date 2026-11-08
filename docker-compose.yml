@@ -1,0 +1,145 @@
+services:
+  # =============================================================================
+  # 1. POSTGRESQL DATABASE SERVICE (Primary Relational Store & RBAC)
+  # =============================================================================
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: analyst_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-admin_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-StrongAdminPassword_2026!}
+      POSTGRES_DB: ${POSTGRES_DB:-ecommerce_analytics}
+      TZ: Asia/Tehran
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - analyst_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-admin_user} -d $${POSTGRES_DB:-ecommerce_analytics}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # =============================================================================
+  # 2. DATABASE SEEDER SERVICE (One-Shot Iranian E-Commerce Synthesizer)
+  # =============================================================================
+  db_seeder:
+    build:
+      context: ./database
+      dockerfile: Dockerfile
+    container_name: analyst_db_seeder
+    restart: "no"
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres_db}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-ecommerce_analytics}
+      POSTGRES_USER: ${POSTGRES_USER:-admin_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-StrongAdminPassword_2026!}
+      DB_READONLY_USER: ${DB_READONLY_USER:-llm_reader}
+      DB_READONLY_PASSWORD: ${DB_READONLY_PASSWORD:-ReadOnlySafePassword_2026!}
+      SEED_CUSTOMERS_COUNT: ${SEED_CUSTOMERS_COUNT:-1000}
+      SEED_PRODUCTS_COUNT: ${SEED_PRODUCTS_COUNT:-500}
+      SEED_ORDERS_COUNT: ${SEED_ORDERS_COUNT:-10000}
+      FORCE_RESEED: ${FORCE_RESEED:-false}
+      RANDOM_SEED: ${RANDOM_SEED:-42}
+    networks:
+      - analyst_network
+
+  # =============================================================================
+  # 3. FASTAPI BACKEND SERVICE (Structured RAG & Self-Healing SQL Engine)
+  # =============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: analyst_backend
+    restart: unless-stopped
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      db_seeder:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_HOST: ${POSTGRES_HOST:-postgres_db}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_DB: ${POSTGRES_DB:-ecommerce_analytics}
+      POSTGRES_USER: ${POSTGRES_USER:-admin_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-StrongAdminPassword_2026!}
+      DB_READONLY_USER: ${DB_READONLY_USER:-llm_reader}
+      DB_READONLY_PASSWORD: ${DB_READONLY_PASSWORD:-ReadOnlySafePassword_2026!}
+      ADMIN_DATABASE_URL: ${ADMIN_DATABASE_URL:-postgresql+psycopg2://admin_user:StrongAdminPassword_2026!@postgres_db:5432/ecommerce_analytics}
+      READONLY_DATABASE_URL: ${READONLY_DATABASE_URL:-postgresql+psycopg2://llm_reader:ReadOnlySafePassword_2026!@postgres_db:5432/ecommerce_analytics}
+      LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-gemini-2.5-flash}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.0}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-45}
+      MAX_SQL_RETRIES: ${MAX_SQL_RETRIES:-3}
+      MAX_RESULT_ROWS: ${MAX_RESULT_ROWS:-100}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      BACKEND_HOST: ${BACKEND_HOST:-0.0.0.0}
+      BACKEND_PORT: ${BACKEND_PORT:-8000}
+      # Proxy configurations for LLM API external calls
+      HTTP_PROXY: http://host.docker.internal:7897
+      HTTPS_PROXY: http://host.docker.internal:7897
+      NO_PROXY: localhost,127.0.0.1,postgres_db
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    networks:
+      - analyst_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # =============================================================================
+  # 4. N8N WORKFLOW AUTOMATION SERVICE (Telegram Bot & Scheduled Reporting)
+  # =============================================================================
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: analyst_n8n
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    environment:
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - NODE_ENV=production
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE:-Asia/Tehran}
+      - TZ=${GENERIC_TIMEZONE:-Asia/Tehran}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_ADMIN_CHAT_ID=${TELEGRAM_ADMIN_CHAT_ID:-}
+      # Proxy configurations for Telegram Bot external API calls
+      - HTTP_PROXY=http://host.docker.internal:7897
+      - HTTPS_PROXY=http://host.docker.internal:7897
+      - NO_PROXY=localhost,127.0.0.1,backend,postgres_db
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/workflows:ro
+    networks:
+      - analyst_network
+
+# =============================================================================
+# 5. GLOBAL VOLUMES & NETWORKS (REQUIRED FOR DOCKER COMPOSE)
+# =============================================================================
+volumes:
+  postgres_data:
+  n8n_data:
+
+networks:
+  analyst_network:
+    driver: bridge
