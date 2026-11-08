@@ -1,4 +1,4 @@
-# 🤖 دستیار هوشمند تحلیل‌گر داده‌های سازمانی | Autonomous Text-to-SQL Agent (Structured RAG)
+#  دستیار هوشمند تحلیل‌گر داده‌های سازمانی | Autonomous Text-to-SQL Agent (Structured RAG)
 
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110.0-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -104,14 +104,14 @@ autonomous-data-analyst/
 ├── docker-compose.yml                         # استک کامل ۴ کانتینر شبکه داکر
 ├── README.md                                  # مستند جامع فنی و ویترین گیت‌هاب (این فایل)
 │
-├── database/                                  # 📦 لایه پایگاه داده و مهندسی داده
+├── database/                                  #  لایه پایگاه داده و مهندسی داده
 │   ├── README.md                              # مستندات تخصصی دیتابیس، ERD و ایندکس‌ها
 │   ├── init.sql                               # تعاریف DDL، ایندکس‌ها و نقش امنیتی llm_reader
 │   ├── Dockerfile                             # ایمیج کانتینر Seeder بر پایه Python Slim
 │   ├── requirements.txt                       # وابستگی‌های پایتون (psycopg2, Faker, tqdm)
 │   └── seed_data.py                           # اسکریپت تولید ۱۰,۰۰۰ تراکنش و آزمون نفوذ امنیتی
 │
-├── backend/                                   # 🧠 مغز متفکر و سرویس هوش مصنوعی (Clean Architecture)
+├── backend/                                   #  مغز متفکر و سرویس هوش مصنوعی (Clean Architecture)
 │   ├── README.md                              # مستندات تخصصی معماری تمیز و فلوچارت توالی
 │   ├── Dockerfile                             # ایمیج امن با کاربر غیر روت (appuser)
 │   ├── requirements.txt                       # وابستگی‌های هسته (FastAPI, SQLAlchemy 2.0, httpx)
@@ -123,7 +123,7 @@ autonomous-data-analyst/
 │       ├── services/                          # پرامپت‌ها، کلاینت LLM، فایروال SQL و ارکستراتور
 │       └── api/v1/                            # روت‌های تحلیلی و متادیتا
 │
-└── n8n/                                       # ⚡ لایه اتوماسیون و ارکستراسیون ربات تلگرام
+└── n8n/                                       #  لایه اتوماسیون و ارکستراسیون ربات تلگرام
     ├── README.md                              # راهنمای BotFather، ایمپورت و تونل وب‌هوک
     └── workflows/
         ├── telegram_bot_workflow.json         # ورک‌فلو ربات تلگرام با اکشن تایپینگ و هندل خطا
